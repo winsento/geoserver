@@ -30,7 +30,7 @@ RUN wget -c http://downloads.sourceforge.net/project/geoserver/GeoServer/$GEOSER
     unzip ~/geoserver.zip -d /opt && mv -v /opt/geoserver* /opt/geoserver && \
     rm ~/geoserver.zip
 
-RUN mkdir /opt/geoserver/data_dir/test-mosaic && cp ./*.tif /opt/geoserver/data_dir/test-mosaic 
+COPY ./test-mosaic /opt/geoserver/data_dir/test-mosaic
 
 # Expose GeoServer's default port
 EXPOSE 8080
