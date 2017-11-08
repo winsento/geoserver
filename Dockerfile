@@ -1,9 +1,13 @@
 FROM ubuntu:trusty
 
 
+
 ENV DEBIAN_FRONTEND noninteractive
+ENV GDAL_PATH /usr/share/gdal
 ENV GEOSERVER_HOME /opt/geoserver
 ENV JAVA_HOME /usr
+ENV GDAL_DATA $GDAL_PATH/1.10
+ENV PATH $GDAL_PATH:$PATH
 ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/usr/lib/jni:/usr/share/java
 
 RUN export DEBIAN_FRONTEND=noninteractive
@@ -16,13 +20,31 @@ RUN \
   echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
   add-apt-repository -y ppa:webupd8team/java && \
   apt-get -y update && \
-  apt-get install -y oracle-java8-installer && \
+  apt-get install -y oracle-java8-installer gdal-bin libgdal-java && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/* && \
   rm -rf /var/cache/oracle-jdk8-installer && \
   rm -rf /tmp/* /var/tmp/*
 
 ENV JAVA_HOME /usr/lib/jvm/java-8-oracle
+
+# Get native JAI and ImageIO
+RUN \
+    cd $JAVA_HOME && \
+    wget http://data.boundlessgeo.com/suite/jai/jai-1_1_3-lib-linux-amd64-jdk.bin && \
+    echo "yes" | sh jai-1_1_3-lib-linux-amd64-jdk.bin && \
+    rm jai-1_1_3-lib-linux-amd64-jdk.bin
+
+RUN \
+    cd $JAVA_HOME && \
+    export _POSIX2_VERSION=199209 &&\
+    wget http://data.opengeo.org/suite/jai/jai_imageio-1_1-lib-linux-amd64-jdk.bin && \
+    echo "yes" | sh jai_imageio-1_1-lib-linux-amd64-jdk.bin && \
+    rm jai_imageio-1_1-lib-linux-amd64-jdk.bin
+
+#
+# GEOSERVER INSTALLATION
+#
 ENV GEOSERVER_VERSION 2.12.0
 
 # Get GeoServer
@@ -31,6 +53,12 @@ RUN wget -c http://downloads.sourceforge.net/project/geoserver/GeoServer/$GEOSER
     rm ~/geoserver.zip
 
 COPY ./test-mosaic /opt/geoserver/data_dir/test-mosaic
+
+# Remove old JAI from geoserver
+RUN rm -rf $GEOSERVER_HOME/webapps/geoserver/WEB-INF/lib/jai_codec-1.1.3.jar && \
+    rm -rf $GEOSERVER_HOME/webapps/geoserver/WEB-INF/lib/jai_core-1.1.3.jar && \
+    rm -rf $GEOSERVER_HOME/webapps/geoserver/WEB-INF/lib/jai_imageio-1.1.jar
+
 
 # Expose GeoServer's default port
 EXPOSE 8080
